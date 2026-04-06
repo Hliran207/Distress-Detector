@@ -40,4 +40,3 @@ export function Layout() {
     </div>
   )
 }
-

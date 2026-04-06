@@ -77,7 +77,9 @@ async def get_post(
     post_id: str,
     collection: AsyncIOMotorCollection = Depends(get_posts_collection),
 ) -> RedditPost:
-    doc = await collection.find_one({"$or": [{"post_id": post_id}, {"id": post_id}]})
+    doc = await collection.find_one(
+        {"$or": [{"post_id": post_id}, {"id": post_id}, {"reddit_id": post_id}]}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Post not found")
     return RedditPost(**serialize_mongo_doc(doc))

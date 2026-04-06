@@ -1,5 +1,8 @@
+from typing import Any
+
 from pymongo.collection import Collection
 from pymongo import errors
+from pymongo.errors import BulkWriteError
 
 from app.models.post import Post
 
@@ -17,16 +20,18 @@ class MongoPostsRepository:
     def ensure_indexes(self) -> None:
         # Unique key for all sources (Selenium / PullPush)
         self.collection.create_index("post_id", unique=True)
+        self.collection.create_index("reddit_id", unique=True, sparse=True)
 
     def count_posts_for_subreddit(self, subreddit: str) -> int:
         return self.collection.count_documents({"subreddit": subreddit})
 
     def exists_any_id(self, post_id: str) -> bool:
         """
-        Backwards-compatible dedup: supports legacy docs using `id` as well.
+        Backwards-compatible dedup: `reddit_id`, `post_id`, and legacy `id`.
         """
         return (
-            self.collection.find_one({"post_id": post_id}, projection={"_id": 1}) is not None
+            self.collection.find_one({"reddit_id": post_id}, projection={"_id": 1}) is not None
+            or self.collection.find_one({"post_id": post_id}, projection={"_id": 1}) is not None
             or self.collection.find_one({"id": post_id}, projection={"_id": 1}) is not None
         )
 
@@ -43,4 +48,14 @@ class MongoPostsRepository:
             return True
         except errors.DuplicateKeyError:
             return False
+
+    def insert_many_raw(self, docs: list[dict[str, Any]]) -> int:
+        """Bulk insert; returns count of documents inserted (skips duplicates on partial failure)."""
+        if not docs:
+            return 0
+        try:
+            result = self.collection.insert_many(docs, ordered=False)
+            return len(result.inserted_ids)
+        except BulkWriteError as e:
+            return int(e.details.get("nInserted", 0))
 
