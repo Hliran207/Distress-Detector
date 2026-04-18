@@ -1,2 +1,18 @@
+# Environment
 .env
-.venv
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Models — downloaded automatically at runtime
+models/
+models_backup.zip
+
+# HuggingFace cache
+.cache/
+
+# Data
+*.csv
+notebooks/

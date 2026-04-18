@@ -5,7 +5,8 @@ services:
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,6 +21,11 @@ services:
       - "8001:8000"
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/reddit_distress_db}
+      HF_REPO: ${HF_REPO:-Hliran2/distilbert-distress-detector}
+      HF_HOME: /home/app/.cache/huggingface
+    volumes:
+      # Cache persists between restarts — models download once only
+      - hf_cache:/home/app/.cache/huggingface
     depends_on:
       mongo:
         condition: service_healthy
@@ -38,3 +44,4 @@ services:
 
 volumes:
   mongo_data:
+  hf_cache:

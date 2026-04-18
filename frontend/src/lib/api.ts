@@ -19,6 +19,15 @@ export type StatsResponse = {
   posts_per_subreddit: Record<string, number>
 }
 
+export type PredictResponse = {
+  label: 'distress' | 'not_distress'
+  confidence: number
+  escalated: boolean
+  escalation_reason: 'negation' | 'uncertainty' | 'audit' | 'none'
+  p_fast: number
+  p_transformer: number | null
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
 
 function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined | null>) {
@@ -32,13 +41,21 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return url.toString()
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`Request failed ${res.status}: ${text || res.statusText}`)
   }
   return (await res.json()) as T
+}
+
+export async function predictPost(text: string): Promise<PredictResponse> {
+  return fetchJson<PredictResponse>(buildUrl('/predict/'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
 }
 
 export const api = {
@@ -71,5 +88,7 @@ export const api = {
   async getPost(postId: string): Promise<RedditPost> {
     return fetchJson<RedditPost>(buildUrl(`/posts/${encodeURIComponent(postId)}`))
   },
+
+  predictPost,
 }
 

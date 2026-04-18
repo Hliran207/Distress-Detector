@@ -24,6 +24,9 @@ export function Layout() {
             <NavLink to="/search" className={navLinkClass}>
               Search
             </NavLink>
+            <NavLink to="/detect" className={navLinkClass}>
+              Detect
+            </NavLink>
           </nav>
         </div>
       </header>
