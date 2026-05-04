@@ -1,3 +1,9 @@
+export type TelegramSenderInfo = {
+  sender_id?: number | null
+  first_name?: string | null
+  username?: string | null
+}
+
 export type RedditPost = {
   post_id: string
   title?: string | null
@@ -6,6 +12,9 @@ export type RedditPost = {
   label?: 0 | 1 | null
   created_utc?: number | null
   timestamp?: string | null
+  platform?: string | null
+  distress_score?: number | null
+  sender_info?: TelegramSenderInfo | null
 }
 
 export type PostsListResponse = {
@@ -26,6 +35,28 @@ export type PredictResponse = {
   escalation_reason: 'negation' | 'uncertainty' | 'audit' | 'none'
   p_fast: number
   p_transformer: number | null
+}
+
+export type TelegramScanRequest = {
+  chat_id: number
+  limit?: number
+}
+
+export type TelegramScanItem = {
+  post_id: string
+  label: 0 | 1
+  distress_score: number
+  preview: string
+}
+
+export type TelegramScanResponse = {
+  chat_id: number
+  fetched: number
+  processed: number
+  inserted: number
+  skipped_duplicates: number
+  skipped_empty: number
+  items: TelegramScanItem[]
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
@@ -87,6 +118,33 @@ export const api = {
 
   async getPost(postId: string): Promise<RedditPost> {
     return fetchJson<RedditPost>(buildUrl(`/posts/${encodeURIComponent(postId)}`))
+  },
+
+  async listTelegramMessages(args: {
+    limit: number
+    offset: number
+    chat_id?: string
+    min_score?: number
+  }): Promise<PostsListResponse> {
+    return fetchJson<PostsListResponse>(
+      buildUrl('/posts/telegram', {
+        limit: args.limit,
+        offset: args.offset,
+        chat_id: args.chat_id,
+        min_score: args.min_score,
+      }),
+    )
+  },
+
+  async scanTelegram(args: TelegramScanRequest): Promise<TelegramScanResponse> {
+    return fetchJson<TelegramScanResponse>(buildUrl('/posts/scan/telegram'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: args.chat_id,
+        ...(args.limit !== undefined ? { limit: args.limit } : {}),
+      }),
+    })
   },
 
   predictPost,

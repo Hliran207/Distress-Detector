@@ -21,6 +21,11 @@ services:
       - "8001:8000"
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/reddit_distress_db}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DEFAULT_TELEGRAM_CHAT_ID: ${DEFAULT_TELEGRAM_CHAT_ID}
+      TELEGRAM_AUTO_SCAN_ENABLED: ${TELEGRAM_AUTO_SCAN_ENABLED:-true}
+      TELEGRAM_AUTO_SCAN_INTERVAL_S: ${TELEGRAM_AUTO_SCAN_INTERVAL_S:-60}
+      TELEGRAM_AUTO_SCAN_LIMIT: ${TELEGRAM_AUTO_SCAN_LIMIT:-100}
       HF_REPO: ${HF_REPO:-Hliran2/distilbert-distress-detector}
       HF_HOME: /home/app/.cache/huggingface
     volumes:

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 
 COLLECTION_NAME = "posts"
+TELEGRAM_COLLECTION_NAME = "telegram_messages"
 
 
 def _load_env() -> None:

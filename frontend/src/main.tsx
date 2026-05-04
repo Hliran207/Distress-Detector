@@ -8,6 +8,7 @@ import { PostsPage } from './pages/PostsPage'
 import { SearchPage } from './pages/SearchPage'
 import { PostDetailsPage } from './pages/PostDetailsPage'
 import { DetectPage } from './pages/DetectPage'
+import { TelegramPage } from './pages/TelegramPage'
 
 const router = createBrowserRouter([
   {
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
       { path: 'posts/:postId', element: <PostDetailsPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'detect', element: <DetectPage /> },
+      { path: 'telegram', element: <TelegramPage /> },
     ],
   },
 ])

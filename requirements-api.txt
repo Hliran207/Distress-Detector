@@ -14,3 +14,6 @@ nltk==3.8.1
 numpy==1.26.4
 joblib==1.4.2
 huggingface_hub==0.23.0
+
+# ── Telegram integration ──────────────────────────────────────────────────────
+python-telegram-bot==21.6

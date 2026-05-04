@@ -65,6 +65,17 @@ a { color: inherit; text-decoration: none; }
 .whitespace-pre-wrap { white-space: pre-wrap; }
 .disabled_opacity-50:disabled { opacity: 0.5; }
 
+/* Red palette + alert utilities (Telegram alerts page, error boxes) */
+.bg-red-50 { background: #fef2f2; }
+.bg-red-100 { background: #fee2e2; }
+.border-red-200 { border-color: #fecaca; }
+.text-red-700 { color: #b91c1c; }
+.text-red-800 { color: #991b1b; }
+.alert-row { background: #fef2f2; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; line-height: 1; }
+.badge-alert { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.badge-ok { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
 @media (min-width: 768px) {
   .md_grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .md_grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
