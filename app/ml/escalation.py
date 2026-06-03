@@ -1,64 +1,15 @@
-import re
-import random
-
-# Negation cues that trigger DistilBERT escalation
-NEGATION_CUES = {
-    "not",
-    "never",
-    "don't",
-    "doesn't",
-    "didn't",
-    "won't",
-    "can't",
-    "cannot",
-    "no",
-    "nobody",
-    "nothing",
-    "nowhere",
-    "nor",
-    "neither",
-    "hardly",
-    "barely",
-    "scarcely",
-    "dont",
-    "cant",
-    "wont",
-    "doesnt",
-    "didnt",  # common no-apostrophe forms
-}
+"""
+Stage-2 escalation: run the transformer only when the fast model score is high enough.
+"""
 
 
-def has_negation(text: str) -> bool:
-    """Return True if any negation cue is found in the text."""
-    tokens = set(re.findall(r"\b\w+\b", text.lower()))
-    return bool(tokens & NEGATION_CUES)
-
-
-def should_escalate(
-    text: str,
-    p_fast: float,
-    uncertainty_band: float = 0.25,
-    audit_rate: float = 0.10,
-) -> tuple[bool, str]:
+def should_escalate(p_fast: float, threshold: float = 0.5) -> tuple[bool, str]:
     """
-    Dual-trigger escalation logic — OR across three triggers.
+    Return whether to invoke the transformer on the same raw text.
 
-    Returns (escalate: bool, reason: str)
-
-    Trigger 1 — Uncertainty  : fast model confidence is ambiguous
-    Trigger 2 — Negation     : linguistic negation cues detected
-    Trigger 3 — Random audit : 10% of confident predictions audited
+    Stage 1 — fast model score below `threshold`: skip transformer (low distress).
+    Stage 2 — score at or above `threshold`: run transformer; its score is final.
     """
-    # Trigger 1 — uncertainty band
-    if abs(p_fast - 0.5) < uncertainty_band:
-        return True, "uncertainty"
-
-    # Trigger 2 — negation detected in raw text
-    if has_negation(text):
-        return True, "negation"
-
-    # Trigger 3 — random quality audit
-    if random.random() < audit_rate:
-        return True, "audit"
-
+    if p_fast >= threshold:
+        return True, "fast_threshold"
     return False, "none"

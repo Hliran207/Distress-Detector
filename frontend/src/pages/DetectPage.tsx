@@ -93,9 +93,9 @@ export function DetectPage() {
 
   const escalationLine =
     result &&
-    (result.escalated
-      ? `Escalated to transformer — reason: ${result.escalation_reason}`
-      : 'Fast model only — transformer not needed')
+    (result.method === 'transformer'
+      ? `Final decision: transformer (fast score was ≥ 50%)`
+      : 'Final decision: fast model only (score below 50% — transformer skipped)')
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,5 @@
 import os
 import joblib
-import numpy as np
 import torch
 from transformers import (
     DistilBertForSequenceClassification,
@@ -15,13 +14,15 @@ HF_REPO = os.getenv("HF_REPO", "Hliran2/distilbert-distress-detector")
 
 class DistressEnsemble:
     """
-    Dual-model ensemble with dual-trigger escalation.
+    Two-stage distress classification.
 
-    Fast path  : TF-IDF + Logistic Regression (every request)
-    Slow path  : DistilBERT (only when a trigger fires)
+    Stage 1 — Fast (TF-IDF + Logistic Regression): every request.
+              If p(distress) < fast_escalation_threshold (default 50%), return
+              immediately as low distress using the fast score only.
 
-    Weights    : 35% fast model + 65% transformer
-    Triggers   : uncertainty band | negation cues | random audit (10%)
+    Stage 2 — Transformer (DistilBERT): only when the fast score is at or above
+              the threshold. The transformer probability is the final confidence
+              (no blending), reducing false positives on mild negative language.
     """
 
     def __init__(
@@ -30,11 +31,14 @@ class DistressEnsemble:
         uncertainty_band: float = 0.25,
         audit_rate: float = 0.10,
         distress_threshold: float = 0.45,
+        fast_escalation_threshold: float = 0.5,
     ):
+        # Legacy kwargs (weights, uncertainty_band, audit_rate) kept for compatibility.
         self.weights = weights
         self.uncertainty_band = uncertainty_band
         self.audit_rate = audit_rate
         self.distress_threshold = distress_threshold
+        self.fast_escalation_threshold = fast_escalation_threshold
         self.device = torch.device("cpu")
 
         self._tfidf_model = None
@@ -89,46 +93,42 @@ class DistressEnsemble:
 
     def predict(self, raw_text: str) -> dict:
         """
-        Full ensemble prediction for a single post.
+        Two-stage prediction for a single post.
 
         Returns a dict with:
             label               : 'distress' | 'not_distress'
             confidence          : final probability score (0–1)
+            method              : 'fast' | 'transformer' (which model set confidence)
             escalated           : whether transformer was invoked
-            escalation_reason   : 'uncertainty' | 'negation' | 'audit' | 'none'
+            escalation_reason   : 'fast_threshold' | 'none'
             p_fast              : TF-IDF probability
             p_transformer       : DistilBERT probability (null if not escalated)
         """
-        # Step 1 — preprocess for TF-IDF
         text_clean = preprocess(raw_text)
-
-        # Step 2 — fast model
         p_fast = self._predict_tfidf(text_clean)
 
-        # Step 3 — check escalation triggers
-        escalate, reason = should_escalate(
-            raw_text,
-            p_fast,
-            self.uncertainty_band,
-            self.audit_rate,
-        )
+        escalate, reason = should_escalate(p_fast, self.fast_escalation_threshold)
 
-        # Step 4 — transformer if triggered
-        if escalate:
-            p_bert = self._predict_bert(raw_text)
-            w1, w2 = self.weights
-            p_final = w1 * p_fast + w2 * p_bert
-        else:
-            p_bert = None
-            p_final = p_fast
+        if not escalate:
+            return {
+                "label": "not_distress",
+                "confidence": round(p_fast, 4),
+                "method": "fast",
+                "escalated": False,
+                "escalation_reason": reason,
+                "p_fast": round(p_fast, 4),
+                "p_transformer": None,
+            }
 
+        p_bert = self._predict_bert(raw_text)
         return {
             "label": (
-                "distress" if p_final >= self.distress_threshold else "not_distress"
+                "distress" if p_bert >= self.distress_threshold else "not_distress"
             ),
-            "confidence": round(p_final, 4),
-            "escalated": escalate,
+            "confidence": round(p_bert, 4),
+            "method": "transformer",
+            "escalated": True,
             "escalation_reason": reason,
             "p_fast": round(p_fast, 4),
-            "p_transformer": round(p_bert, 4) if p_bert is not None else None,
+            "p_transformer": round(p_bert, 4),
         }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
@@ -7,6 +7,8 @@ import type { PostsListResponse, RedditPost, TelegramScanResponse } from '../lib
 const DEFAULT_LIMIT = 25
 const ALERT_THRESHOLD = 0.7
 const CHAT_ID_STORAGE_KEY = 'telegram.lastChatId'
+/** Poll Mongo-backed list; backend auto-scan runs about every 15s. */
+const LIST_POLL_INTERVAL_MS = 10_000
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
@@ -67,6 +69,7 @@ export function TelegramPage() {
   const [data, setData] = useState<PostsListResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
 
   const [scanChatId, setScanChatId] = useState<string>(() => {
     if (chatIdParam) return chatIdParam
@@ -79,25 +82,47 @@ export function TelegramPage() {
   const [scanResult, setScanResult] = useState<TelegramScanResponse | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  const loadMessages = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setLoading(true)
+        setError(null)
+      }
+      try {
+        const d = await api.listTelegramMessages({
+          limit,
+          offset,
+          chat_id: chatId,
+          min_score: minScore,
+        })
+        setData(d)
+        setLastSyncedAt(new Date())
+      } catch (e: unknown) {
+        if (!opts?.silent) {
+          setError(e instanceof Error ? e.message : String(e))
+        }
+      } finally {
+        if (!opts?.silent) {
+          setLoading(false)
+        }
+      }
+    },
+    [limit, offset, chatId, minScore],
+  )
+
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    api
-      .listTelegramMessages({ limit, offset, chat_id: chatId, min_score: minScore })
-      .then((d) => {
-        if (!cancelled) setData(d)
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+    void loadMessages()
+  }, [loadMessages, refreshKey])
+
+  useEffect(() => {
+    const poll = () => {
+      if (document.visibilityState === 'visible') {
+        void loadMessages({ silent: true })
+      }
     }
-  }, [limit, offset, chatIdParam, minScoreParam, refreshKey])
+    const id = window.setInterval(poll, LIST_POLL_INTERVAL_MS)
+    return () => window.clearInterval(id)
+  }, [loadMessages])
 
   const pageInfo = useMemo(() => {
     const total = data?.total ?? 0
@@ -157,13 +182,25 @@ export function TelegramPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-semibold">Telegram Alerts</h1>
-        {data && (
-          <div className="text-sm text-slate-500">
-            Showing {pageInfo.start}-{pageInfo.end} of {pageInfo.total.toLocaleString()}
+        <div className="flex flex-col items-end gap-1 text-sm text-slate-500">
+          {data && (
+            <div>
+              Showing {pageInfo.start}-{pageInfo.end} of {pageInfo.total.toLocaleString()}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
+              aria-hidden
+            />
+            <span>
+              Auto-updating every {LIST_POLL_INTERVAL_MS / 1000}s
+              {lastSyncedAt ? ` · last sync ${TELEGRAM_ALERTS_DATETIME.format(lastSyncedAt)}` : ''}
+            </span>
           </div>
-        )}
+        </div>
       </div>
 
       <form onSubmit={runScan} className="rounded-lg border border-slate-200 p-4 grid gap-4 md_grid-cols-3">
@@ -275,7 +312,8 @@ export function TelegramPage() {
                 {data.items.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-6 px-3 text-center text-slate-500">
-                      No Telegram messages stored yet. Use Scan Now above to pull recent updates.
+                      No Telegram messages stored yet. Post in the group — the server scans every ~15s
+                      and this table refreshes automatically.
                     </td>
                   </tr>
                 )}

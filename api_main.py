@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
     auto_enabled = auto_enabled_raw in _TRUTHY
     chat_id = _parse_chat_id(os.getenv("DEFAULT_TELEGRAM_CHAT_ID"))
     interval_s = _parse_positive_int(
-        os.getenv("TELEGRAM_AUTO_SCAN_INTERVAL_S"), 60, "TELEGRAM_AUTO_SCAN_INTERVAL_S"
+        os.getenv("TELEGRAM_AUTO_SCAN_INTERVAL_S"), 15, "TELEGRAM_AUTO_SCAN_INTERVAL_S"
     )
     auto_limit = _parse_positive_int(
         os.getenv("TELEGRAM_AUTO_SCAN_LIMIT"), 100, "TELEGRAM_AUTO_SCAN_LIMIT"

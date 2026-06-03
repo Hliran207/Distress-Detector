@@ -31,8 +31,9 @@ export type StatsResponse = {
 export type PredictResponse = {
   label: 'distress' | 'not_distress'
   confidence: number
+  method: 'fast' | 'transformer'
   escalated: boolean
-  escalation_reason: 'negation' | 'uncertainty' | 'audit' | 'none'
+  escalation_reason: 'fast_threshold' | 'none'
   p_fast: number
   p_transformer: number | null
 }

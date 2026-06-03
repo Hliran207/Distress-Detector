@@ -20,6 +20,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     label: str
     confidence: float
+    method: str  # "fast" | "transformer"
     escalated: bool
     escalation_reason: str
     p_fast: float
@@ -47,7 +48,7 @@ class PredictBatchResponse(BaseModel):
 async def predict_single(request: Request, body: PredictRequest):
     """
     Classify a single post as distress or not_distress.
-    Runs the full dual-trigger ensemble pipeline.
+    Two-stage pipeline: fast model first; transformer only if fast score >= 50%.
     """
     ensemble = request.app.state.ensemble
     if ensemble is None:
@@ -59,7 +60,7 @@ async def predict_single(request: Request, body: PredictRequest):
 async def predict_batch(request: Request, body: PredictBatchRequest):
     """
     Classify a batch of posts (max 32).
-    Each post runs through the full ensemble independently.
+    Each post runs through the two-stage pipeline independently.
     """
     ensemble = request.app.state.ensemble
     if ensemble is None:
