@@ -1,9 +1,8 @@
-from motor.motor_asyncio import AsyncIOMotorCollection
 from fastapi import APIRouter, Depends
+from motor.motor_asyncio import AsyncIOMotorCollection
 
-from app.api.deps import get_posts_collection
-from app.api.schemas import StatsResponse
-
+from deps import get_posts_collection
+from schemas import StatsResponse
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -39,4 +38,3 @@ async def stats_summary(
         counts_by_label=label_counts,
         posts_per_subreddit=per_subreddit,
     )
-

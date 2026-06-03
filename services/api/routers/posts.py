@@ -1,32 +1,18 @@
 import re
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorCollection
 
-from app.api.deps import (
-    get_posts_collection,
-    get_telegram_collection,
-    get_telegram_monitor_controller,
-)
-from app.api.schemas import (
-    PostsListResponse,
-    RedditPost,
-    TelegramScanItemModel,
-    TelegramScanRequest,
-    TelegramScanResponse,
-)
-from app.api.serialization import serialize_mongo_doc
-from app.controllers.telegram_monitor import TelegramMonitorController
-from app.services.telegram_service import TelegramFetchError
-
+from deps import get_posts_collection, get_telegram_collection
+from schemas import PostsListResponse, RedditPost
+from serialization import serialize_mongo_doc
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 @router.get("", response_model=PostsListResponse)
 async def list_posts(
-    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     label: Optional[int] = Query(default=None, ge=0, le=1),
@@ -117,52 +103,6 @@ async def list_telegram_messages(
     docs = await cursor.to_list(length=limit)
     items = [RedditPost(**serialize_mongo_doc(d)) for d in docs]
     return PostsListResponse(total=total, items=items)
-
-
-@router.post(
-    "/scan/telegram",
-    response_model=TelegramScanResponse,
-    summary="Scan pending Telegram updates for distress",
-    description=(
-        "Drains the Telegram bot's pending update queue (Bot API "
-        "`getUpdates`), keeps messages whose `chat.id` matches the "
-        "requested `chat_id`, scores each with the distress ensemble, "
-        "and stores the analyzed messages in the `telegram_messages` "
-        "collection (separate from the Reddit `posts` collection). "
-        "Note: only messages received while the bot was online and not "
-        "yet acknowledged are available — older chat history cannot be "
-        "fetched through the Bot API. Serializes against the background "
-        "auto-scan loop via `app.state.telegram_lock`."
-    ),
-)
-async def scan_telegram(
-    request: Request,
-    body: TelegramScanRequest,
-    controller: TelegramMonitorController = Depends(get_telegram_monitor_controller),
-) -> TelegramScanResponse:
-    try:
-        async with request.app.state.telegram_lock:
-            summary = await controller.scan_chat(body.chat_id, limit=body.limit)
-    except TelegramFetchError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    return TelegramScanResponse(
-        chat_id=summary.chat_id,
-        fetched=summary.fetched,
-        processed=summary.processed,
-        inserted=summary.inserted,
-        skipped_duplicates=summary.skipped_duplicates,
-        skipped_empty=summary.skipped_empty,
-        items=[
-            TelegramScanItemModel(
-                post_id=item.post_id,
-                label=item.label,
-                distress_score=item.distress_score,
-                preview=item.preview,
-            )
-            for item in summary.items
-        ],
-    )
 
 
 @router.get("/{post_id}", response_model=RedditPost)

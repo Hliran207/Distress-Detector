@@ -31,25 +31,3 @@ class StatsResponse(BaseModel):
     total_records: int
     counts_by_label: dict[str, int]
     posts_per_subreddit: dict[str, int]
-
-
-class TelegramScanRequest(BaseModel):
-    chat_id: int = Field(..., description="Telegram chat id to scan")
-    limit: int = Field(default=50, ge=1, le=500)
-
-
-class TelegramScanItemModel(BaseModel):
-    post_id: str
-    label: int = Field(..., ge=0, le=1)
-    distress_score: float = Field(..., ge=0.0, le=1.0)
-    preview: str
-
-
-class TelegramScanResponse(BaseModel):
-    chat_id: int
-    fetched: int
-    processed: int
-    inserted: int
-    skipped_duplicates: int
-    skipped_empty: int
-    items: list[TelegramScanItemModel]

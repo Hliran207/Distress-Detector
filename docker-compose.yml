@@ -1,4 +1,35 @@
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CREATE_TOPICS: >
+        raw_messages:1:1,
+        clean_messages:1:1,
+        results:1:1
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   mongo:
     image: mongo:7
     restart: unless-stopped
@@ -12,25 +43,56 @@ services:
       retries: 5
       start_period: 10s
 
-  backend:
+  telegram-bot:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      context: ./services/telegram-bot
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DEFAULT_TELEGRAM_CHAT_ID: ${DEFAULT_TELEGRAM_CHAT_ID}
+      TELEGRAM_AUTO_SCAN_INTERVAL_S: ${TELEGRAM_AUTO_SCAN_INTERVAL_S:-15}
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  preprocessing:
+    build:
+      context: ./services/preprocessing
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  model:
+    build:
+      context: ./services/model
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/reddit_distress_db}
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-reddit_distress_db}
+      HF_REPO: ${HF_REPO:-Hliran2/distilbert-distress-detector}
+      HF_HOME: /home/app/.cache/huggingface
+    volumes:
+      - hf_cache:/home/app/.cache/huggingface
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./services/api
     restart: unless-stopped
     ports:
       - "8001:8000"
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/reddit_distress_db}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      DEFAULT_TELEGRAM_CHAT_ID: ${DEFAULT_TELEGRAM_CHAT_ID}
-      TELEGRAM_AUTO_SCAN_ENABLED: ${TELEGRAM_AUTO_SCAN_ENABLED:-true}
-      TELEGRAM_AUTO_SCAN_INTERVAL_S: ${TELEGRAM_AUTO_SCAN_INTERVAL_S:-15}
-      TELEGRAM_AUTO_SCAN_LIMIT: ${TELEGRAM_AUTO_SCAN_LIMIT:-100}
-      HF_REPO: ${HF_REPO:-Hliran2/distilbert-distress-detector}
-      HF_HOME: /home/app/.cache/huggingface
-    volumes:
-      # Cache persists between restarts — models download once only
-      - hf_cache:/home/app/.cache/huggingface
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-reddit_distress_db}
     depends_on:
       mongo:
         condition: service_healthy
@@ -45,7 +107,7 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - api
 
 volumes:
   mongo_data:
