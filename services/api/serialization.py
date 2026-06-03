@@ -24,4 +24,3 @@ def serialize_mongo_doc(doc: dict[str, Any]) -> dict[str, Any]:
         doc["post_id"] = str(doc["post_id"])
 
     return doc
-
