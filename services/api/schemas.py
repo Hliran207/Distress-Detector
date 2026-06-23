@@ -31,3 +31,36 @@ class StatsResponse(BaseModel):
     total_records: int
     counts_by_label: dict[str, int]
     posts_per_subreddit: dict[str, int]
+
+
+class PredictRequest(BaseModel):
+    text: str = Field(
+        ...,
+        min_length=10,
+        max_length=10000,
+        description="Raw post text to classify",
+    )
+
+
+class PredictResponse(BaseModel):
+    label: str
+    confidence: float
+    method: str
+    escalated: bool
+    escalation_reason: str
+    p_fast: float
+    p_transformer: float | None
+
+
+class PredictBatchRequest(BaseModel):
+    texts: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="List of raw post texts (max 32 per batch)",
+    )
+
+
+class PredictBatchResponse(BaseModel):
+    results: list[PredictResponse]
+    total: int
