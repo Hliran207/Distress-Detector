@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, getResultsWebSocketUrl } from '../lib/api'
 import type { PostsListResponse, RedditPost, TelegramScanResponse } from '../lib/api'
 
 const DEFAULT_LIMIT = 25
 const ALERT_THRESHOLD = 0.7
 const CHAT_ID_STORAGE_KEY = 'telegram.lastChatId'
-/** Poll Mongo-backed list; backend auto-scan runs about every 15s. */
-const LIST_POLL_INTERVAL_MS = 10_000
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
@@ -52,6 +50,33 @@ function formatSender(post: RedditPost): string {
   return '—'
 }
 
+function matchesTelegramFilters(
+  post: RedditPost,
+  filters: { chatId?: string; minScore?: number },
+): boolean {
+  if (filters.chatId !== undefined && post.subreddit !== filters.chatId) return false
+  if (filters.minScore !== undefined) {
+    const score = post.distress_score ?? 0
+    if (score < filters.minScore) return false
+  }
+  return true
+}
+
+function kafkaResultToPost(raw: Record<string, unknown>): RedditPost {
+  return {
+    post_id: String(raw.post_id ?? ''),
+    body: (raw.body as string | null | undefined) ?? null,
+    subreddit: raw.subreddit != null ? String(raw.subreddit) : null,
+    label: raw.label === 1 ? 1 : raw.label === 0 ? 0 : null,
+    distress_score: typeof raw.distress_score === 'number' ? raw.distress_score : null,
+    timestamp: (raw.timestamp as string | null | undefined) ?? null,
+    created_utc: typeof raw.created_utc === 'number' ? raw.created_utc : null,
+    platform: (raw.platform as string | null | undefined) ?? 'telegram',
+    sender_info: (raw.sender_info as RedditPost['sender_info']) ?? null,
+    title: (raw.title as string | null | undefined) ?? null,
+  }
+}
+
 export function TelegramPage() {
   const [params, setParams] = useSearchParams()
 
@@ -81,6 +106,10 @@ export function TelegramPage() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<TelegramScanResponse | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [wsConnected, setWsConnected] = useState(false)
+
+  const listFiltersRef = useRef({ chatId, minScore, offset, limit })
+  listFiltersRef.current = { chatId, minScore, offset, limit }
 
   const loadMessages = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -115,14 +144,47 @@ export function TelegramPage() {
   }, [loadMessages, refreshKey])
 
   useEffect(() => {
-    const poll = () => {
-      if (document.visibilityState === 'visible') {
-        void loadMessages({ silent: true })
-      }
+    const ws = new WebSocket(getResultsWebSocketUrl())
+
+    ws.onopen = () => {
+      console.log('WebSocket connected ✅')
+      setWsConnected(true)
     }
-    const id = window.setInterval(poll, LIST_POLL_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [loadMessages])
+
+    ws.onmessage = (event) => {
+      const newPost = kafkaResultToPost(JSON.parse(event.data) as Record<string, unknown>)
+      if (!newPost.post_id) return
+
+      const { chatId: activeChatId, minScore: activeMinScore, offset: activeOffset, limit: activeLimit } =
+        listFiltersRef.current
+
+      if (!matchesTelegramFilters(newPost, { chatId: activeChatId, minScore: activeMinScore })) {
+        return
+      }
+
+      setData((prev) => {
+        if (!prev) return prev
+        if (prev.items.some((p) => p.post_id === newPost.post_id)) return prev
+
+        if (activeOffset !== 0) {
+          return { ...prev, total: prev.total + 1 }
+        }
+
+        return {
+          total: prev.total + 1,
+          items: [newPost, ...prev.items].slice(0, activeLimit),
+        }
+      })
+      setLastSyncedAt(new Date())
+    }
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected')
+      setWsConnected(false)
+    }
+
+    return () => ws.close()
+  }, [])
 
   const pageInfo = useMemo(() => {
     const total = data?.total ?? 0
@@ -192,12 +254,12 @@ export function TelegramPage() {
           )}
           <div className="flex items-center gap-2">
             <span
-              className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
+              className={`inline-block h-2 w-2 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
               aria-hidden
             />
             <span>
-              Auto-updating every {LIST_POLL_INTERVAL_MS / 1000}s
-              {lastSyncedAt ? ` · last sync ${TELEGRAM_ALERTS_DATETIME.format(lastSyncedAt)}` : ''}
+              {wsConnected ? 'Live updates via WebSocket' : 'Connecting…'}
+              {lastSyncedAt ? ` · last update ${TELEGRAM_ALERTS_DATETIME.format(lastSyncedAt)}` : ''}
             </span>
           </div>
         </div>
@@ -312,8 +374,7 @@ export function TelegramPage() {
                 {data.items.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-6 px-3 text-center text-slate-500">
-                      No Telegram messages stored yet. Post in the group — the server scans every ~15s
-                      and this table refreshes automatically.
+                      No Telegram messages stored yet. Post in the group — new results appear here in real time.
                     </td>
                   </tr>
                 )}

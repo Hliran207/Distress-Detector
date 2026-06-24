@@ -93,12 +93,15 @@ services:
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/reddit_distress_db}
       MONGO_DB_NAME: ${MONGO_DB_NAME:-reddit_distress_db}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       HF_REPO: ${HF_REPO:-Hliran2/distilbert-distress-detector}
       HF_HOME: /home/app/.cache/huggingface
     volumes:
       - hf_cache:/home/app/.cache/huggingface
     depends_on:
       mongo:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   frontend:

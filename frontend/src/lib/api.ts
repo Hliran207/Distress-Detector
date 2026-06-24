@@ -62,6 +62,10 @@ export type TelegramScanResponse = {
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
 
+export function getResultsWebSocketUrl(): string {
+  return `${API_BASE_URL.replace(/^http/, 'ws')}/ws/results`
+}
+
 function buildUrl(path: string, params?: Record<string, string | number | boolean | undefined | null>) {
   const url = new URL(path, API_BASE_URL)
   if (params) {
