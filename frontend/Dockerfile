@@ -5,7 +5,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Install dependencies first (better layer caching when only source changes).
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 COPY index.html vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json eslint.config.js ./
