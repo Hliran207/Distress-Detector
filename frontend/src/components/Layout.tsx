@@ -30,6 +30,9 @@ export function Layout() {
             <NavLink to="/telegram" className={navLinkClass}>
               Telegram Alerts
             </NavLink>
+            <NavLink to="/dashboard" className={navLinkClass}>
+              Dashboard
+            </NavLink>
           </nav>
         </div>
       </header>

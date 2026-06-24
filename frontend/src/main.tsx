@@ -9,6 +9,7 @@ import { SearchPage } from './pages/SearchPage'
 import { PostDetailsPage } from './pages/PostDetailsPage'
 import { DetectPage } from './pages/DetectPage'
 import { TelegramPage } from './pages/TelegramPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 const router = createBrowserRouter([
   {
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: 'search', element: <SearchPage /> },
       { path: 'detect', element: <DetectPage /> },
       { path: 'telegram', element: <TelegramPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
     ],
   },
 ])
