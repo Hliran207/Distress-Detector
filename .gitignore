@@ -16,3 +16,5 @@ models_backup.zip
 # Data
 *.csv
 notebooks/
+# Local editable installs
+packages/**/*.egg-info/
