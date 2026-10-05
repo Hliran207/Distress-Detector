@@ -24,15 +24,15 @@ I'm preparing for a **Salesforce interview (Archive team)**. One part is a **dee
 | Stage | Name | Status |
 |-------|------|--------|
 | 0 | Big picture + end-to-end traces (Telegram Kafka + `/predict`) | Done |
-| 1 | Core ML (`packages/distress_ml/`) | **All files covered; checkpoint NOT done yet** |
-| 2 | Offline corpus (`app/`) | **NEXT** — start with concept primer |
+| 1 | Core ML (`packages/distress_ml/`) | **All files covered; checkpoint NOT done yet** (skipped for now — rehearse before interview) |
+| 2 | Offline corpus (`app/`) | **IN PROGRESS** — concept primer delivered; await `"next"` for file 1 |
 | 3 | Kafka pipeline | Not started |
 | 4 | API | Not started |
 | 5 | Ops | Not started |
 | 6 | Frontend (brief) | Not started |
 | Later | Planned fixes (Option B, BaseKafkaService) + mock interview | After Stages 1–6 |
 
-**Resume here:** Stage 1 **checkpoint** (out loud), then say `"next"` to begin **Stage 2 concept primer**.
+**Resume here:** Stage 2 file 7 — `app/repositories/mongo_connection.py` deep dive + quiz, then `"next"`.
 
 ---
 
@@ -74,27 +74,27 @@ Pure functions vs stateful class; cascade vs weighted ensemble; `fast_escalation
 
 Layered architecture: config → models → services → repositories → controllers → views. Repository pattern, composition vs inheritance, sync PyMongo vs async Motor contrast.
 
-### Concept primer (deliver first in new chat)
+### Concept primer (delivered 2026-10-05)
 
 Dataclasses; layered architecture; Repository pattern; Factory (Chrome); composition in controllers; sync vs async data access.
 
 ### Files (paths verified)
 
-| # | File | Why |
-|---|------|-----|
-| 1 | `app/mongo_config.py` | Config leaf |
-| 2 | `app/models/post.py` | Domain `Post` |
-| 3 | `app/models/pullpush.py` | PullPush types |
-| 4 | `app/services/chrome_driver.py` | Driver factory |
-| 5 | `app/services/shreddit_parser.py` | DOM → `Post` |
-| 6 | `app/services/pullpush_client.py` | HTTP client |
-| 7 | `app/repositories/mongo_connection.py` | Sync collection helper |
-| 8 | `app/repositories/mongo_posts.py` | Sync repository (main pattern) |
-| 9 | `app/repositories/posts_repository.py` | Motor async twin |
-| 10 | `app/controllers/reddit_scraper_controller.py` | Selenium orchestration |
-| 11 | `app/controllers/pullpush_final_stretch_controller.py` | Bulk PullPush |
-| 12 | `app/views/scraper_view.py` | CLI view |
-| 13 | `app/views/cli_progress.py` | CLI progress |
+| # | File | Why | Deep dive |
+|---|------|-----|-----------|
+| 1 | `app/mongo_config.py` | Config leaf | Done |
+| 2 | `app/models/post.py` | Domain `Post` | Done (quiz skipped) |
+| 3 | `app/models/pullpush.py` | PullPush types | Done (quiz skipped) |
+| 4 | `app/services/chrome_driver.py` | Driver factory | Done (quiz skipped) |
+| 5 | `app/services/shreddit_parser.py` | DOM → `Post` | Done (quiz skipped) |
+| 6 | `app/services/pullpush_client.py` | HTTP client | Done (quiz skipped) |
+| 7 | `app/repositories/mongo_connection.py` | Sync collection helper | In progress |
+| 8 | `app/repositories/mongo_posts.py` | Sync repository (main pattern) | |
+| 9 | `app/repositories/posts_repository.py` | Motor async twin | |
+| 10 | `app/controllers/reddit_scraper_controller.py` | Selenium orchestration | |
+| 11 | `app/controllers/pullpush_final_stretch_controller.py` | Bulk PullPush | |
+| 12 | `app/views/scraper_view.py` | CLI view | |
+| 13 | `app/views/cli_progress.py` | CLI progress | |
 
 ### Checkpoint
 
@@ -312,6 +312,7 @@ Local dev: `pip install -e "packages/distress_ml[inference]"` from repo root.
 - **2026-10-05:** Phase 0 map; Phase 1 traces; Stages 1–6 plan; Stage 1 files 1–3 deep dive.
 - **2026-10-05:** Refactor + verification on `main`; Telegram 500 fix (`055e219`).
 - **2026-10-05:** Handoff doc update for new Cursor chat (this file + `ISSUES.md`).
+- **2026-10-05:** Stage 2 concept primer delivered; Stage 1 checkpoint deferred.
 
 ---
 
@@ -319,5 +320,5 @@ Local dev: `pip install -e "packages/distress_ml[inference]"` from repo root.
 
 1. Read **`LEARNING_PROGRESS.md`** (this file) and **`ISSUES.md`** in full.
 2. Confirm branch/state: ML lives under **`packages/distress_ml/distress_ml/`**; **`services/api/ml/` does not exist**.
-3. Ask me to run **Stage 1 checkpoint** questions, or say **`next`** after checkpoint to get **Stage 2 concept primer**, then **`app/mongo_config.py`** as first file.
+3. Stage 2: say **`next`** for current Stage 2 file (see status table). Rehearse Stage 1 checkpoint before interview.
 4. During learning: **no code changes**; log smells in **`ISSUES.md`** only.

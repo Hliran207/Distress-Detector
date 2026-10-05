@@ -59,6 +59,17 @@ During **learning**: log only; do not fix unless explicitly in a fix phase.
 
 ---
 
+## Open — offline `app/` config
+
+24. `app/mongo_config.py` vs `services/api/config.py` — Near-duplicate Mongo env helpers (`COLLECTION_NAME`, `TELEGRAM_COLLECTION_NAME`, `load_mongo_uri`, db name); drift risk if one changes.
+25. `app/mongo_config.py:6` — `TELEGRAM_COLLECTION_NAME` defined but unused by any `app/` import (only API `config.py` is consumed).
+26. `app/repositories/mongo_connection.py:11` — Hardcodes `db["posts"]` instead of `COLLECTION_NAME` from `mongo_config`.
+27. `app/services/chrome_driver.py:23-28` — If `user_data_dir` is set, `--headless=new` is never applied even when `config.headless=True` (only a log line); config flag and actual browser mode can disagree.
+28. `app/services/shreddit_parser.py:50-53` — Broad `except Exception: return None` hides real parse bugs; only `StaleElementReferenceException` is named.
+29. `app/repositories/mongo_connection.py` — `get_posts_collection()` appears unused (no imports); PullPush/`main` wires `MongoClient` inline. Also hardcodes `db["posts"]` vs `COLLECTION_NAME` (see #26).
+
+---
+
 ## From learning quizzes (weak spots, not code bugs)
 
 20. Interview prep — Name **`DistressEnsemble.fast_escalation_threshold`** when explaining who sets escalation cutoff.
