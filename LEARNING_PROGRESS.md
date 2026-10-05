@@ -1,23 +1,38 @@
 # LEARNING_PROGRESS — Distress Detector (Salesforce Archive interview prep)
 
-**Mode:** Understanding only. No code fixes. Issues go to `ISSUES.md` (one line each).
+## Context
+
+I'm preparing for a **Salesforce interview (Archive team)**. One part is a **deep code walkthrough** of this project with the hiring manager, focused on **OOP, inheritance, design patterns, and design decisions** — not just “what the code does,” but why it is structured this way and what trade-offs were taken.
 
 ---
 
-## Status
+## Learning rules (follow in every session)
+
+1. **Understanding first, fixes later.** During the learning phase, **never modify application code** (only this file and `ISSUES.md` for bookkeeping).
+2. When a bug, design smell, or docs/code mismatch is found: **one line in `ISSUES.md`**, mention briefly in chat, **move on**.
+3. **One file per step.** For each file:
+   - Purpose → walkthrough (line-by-line for logic, block-by-block for boilerplate)
+   - OOP and design → how it connects
+   - I explain in my own words + **2–3 quiz questions** with honest feedback
+4. Move to the next file **only when I say `"next"`**.
+5. Each stage starts with a **concept primer** and ends with a **checkpoint** I answer **out loud** (no peeking at code).
+
+---
+
+## Overall status
 
 | Stage | Name | Status |
 |-------|------|--------|
-| 0 | Big picture + Phase 1 traces | Done |
-| 1 | Core ML | In progress — `escalation.py` (awaiting your quiz answers) |
-| 2 | Offline corpus (`app/`) | Not started |
+| 0 | Big picture + end-to-end traces (Telegram Kafka + `/predict`) | Done |
+| 1 | Core ML (`packages/distress_ml/`) | **All files covered; checkpoint NOT done yet** |
+| 2 | Offline corpus (`app/`) | **NEXT** — start with concept primer |
 | 3 | Kafka pipeline | Not started |
 | 4 | API | Not started |
 | 5 | Ops | Not started |
 | 6 | Frontend (brief) | Not started |
-| Later | Fix / refactor pass + mock interview | After learning |
+| Later | Planned fixes (Option B, BaseKafkaService) + mock interview | After Stages 1–6 |
 
-**Current step:** Stage 1 file 4 — `services/api/ml/` layout (explain back + quiz)
+**Resume here:** Stage 1 **checkpoint** (out loud), then say `"next"` to begin **Stage 2 concept primer**.
 
 ---
 
@@ -25,36 +40,31 @@
 
 ### Goal
 
-Explain how a raw string becomes a distress / not_distress decision: cleaning, lemmatization, fast TF-IDF score, escalation gate, DistilBERT, and how the same logic is packaged under `services/api/ml/`. Describe responsibilities of each module without looking at the code.
+Explain how raw text becomes a distress / not_distress decision: preprocess → fast TF-IDF → escalation gate → optional DistilBERT; where code lives after the shared-package refactor; how model service and API both use the same package.
 
-### Concept primer (read before the files)
+### Concept primer (already delivered in prior chat)
 
-| Concept | Why you need it here |
-|---------|----------------------|
-| Pure functions vs stateful classes | `escalation` / `preprocess` are mostly functions; `DistressEnsemble` holds loaded models |
-| Separation of concerns / modules | Why escalate / preprocess / ensemble are separate files |
-| Cascade (two-stage) classifiers | Fast filter then expensive model |
-| Probability thresholds | `fast_escalation_threshold` vs `distress_threshold` |
-| Encapsulation (`_private` methods) | `_predict_tfidf`, `_predict_bert` |
-| Composition over inheritance | Ensemble *calls* preprocess + should_escalate; does not subclass them |
+Pure functions vs stateful class; cascade vs weighted ensemble; `fast_escalation_threshold` (routing) vs `distress_threshold` (label after BERT); composition over inheritance; encapsulation with `_predict_*`; module-level NLTK side effects.
 
-*(Full primer text is delivered in chat before the first file.)*
+### Files (paths verified on disk)
 
-### Files
+| # | File | Why this order | Deep dive |
+|---|------|----------------|-----------|
+| 1 | `packages/distress_ml/distress_ml/escalation.py` | Leaf: routing only | Done |
+| 2 | `packages/distress_ml/distress_ml/preprocess.py` | Text pipeline leaf | Done |
+| 3 | `packages/distress_ml/distress_ml/ensemble.py` | Loads models + `predict()` | Done (quiz skipped) |
+| 4 | `packages/distress_ml/pyproject.toml` | Package deps + `[inference]` extra | Done (layout) |
+| 5 | `packages/distress_ml/distress_ml/__init__.py` | Light package root (no torch) | Done (layout) |
+| 6 | *Integration* — imports in `services/model/main.py`, `services/preprocessing/main.py`, `services/api/main.py`, `services/api/deps.py`, `services/api/routers/predict.py` | Who calls `distress_ml` | Done (layout) |
 
-| # | File | Why this order |
-|---|------|----------------|
-| 1 | `services/model/escalation.py` | Smallest leaf: only the escalate yes/no decision |
-| 2 | `services/preprocessing/preprocess.py` | Text pipeline leaf (same content as model/api copies) |
-| 3 | `services/model/ensemble.py` | Wires preprocess + escalation + two models |
-| 4 | `services/api/ml/` (`__init__`, `escalation`, `preprocess`, `ensemble`) | How the API packages the same ML stack |
+**Removed (do not reference in walkthrough):** `services/api/ml/`, `services/model/{ensemble,escalation,preprocess}.py`, `services/preprocessing/preprocess.py`.
 
-### Checkpoint (answer out loud before Stage 2)
+### Checkpoint (NOT done — answer out loud before Stage 2)
 
-1. What does `should_escalate` return, and when does the transformer run?
-2. What does `preprocess` do to a string, step by step?
-3. Walk through `DistressEnsemble.predict` for a high `p_fast` and a low `p_fast`.
-4. Why do both the model service and the API carry an `ensemble` / `ml` package?
+1. What does `should_escalate` return, and when does DistilBERT run?
+2. What does `preprocess` do step by step (including filters on tokens)?
+3. Walk `DistressEnsemble.predict` for high vs low `p_fast` (label, method, thresholds used).
+4. Why is ML in `packages/distress_ml` instead of copied into each service?
 
 ---
 
@@ -62,40 +72,35 @@ Explain how a raw string becomes a distress / not_distress decision: cleaning, l
 
 ### Goal
 
-Explain the layered architecture (config → models → services → repositories → controllers → views), name each class’s responsibility, and describe how the Repository pattern isolates MongoDB from scrape/collect logic. Be ready for OOP / inheritance / composition questions.
+Layered architecture: config → models → services → repositories → controllers → views. Repository pattern, composition vs inheritance, sync PyMongo vs async Motor contrast.
 
-### Concept primer (before files)
+### Concept primer (deliver first in new chat)
 
-| Concept | Why |
-|---------|-----|
-| Dataclasses | Domain models (`Post`, configs) |
-| Layered architecture | Controllers orchestrate; they don’t talk to Chrome/HTTP details directly |
-| Repository pattern | Persist/query behind a collection-shaped API |
-| Factory | e.g. Chrome driver creation |
-| Composition | Controller holds repo + parser + driver factory |
-| Sync PyMongo vs async Motor | Offline scripts vs API (contrast later) |
+Dataclasses; layered architecture; Repository pattern; Factory (Chrome); composition in controllers; sync vs async data access.
 
-### Files
+### Files (paths verified)
 
 | # | File | Why |
 |---|------|-----|
-| 1 | `app/mongo_config.py` | Env/config leaf |
-| 2 | `app/models/post.py`, `app/models/pullpush.py` | Domain types |
-| 3 | `app/services/chrome_driver.py` | Driver factory |
-| 4 | `app/services/shreddit_parser.py` | DOM → `Post` |
-| 5 | `app/services/pullpush_client.py` | HTTP client |
-| 6 | `app/repositories/mongo_connection.py` | Sync collection helper |
-| 7 | `app/repositories/mongo_posts.py` | Sync repository (main pattern example) |
-| 8 | `app/repositories/posts_repository.py` | Async Motor twin (contrast) |
-| 9 | `app/controllers/reddit_scraper_controller.py` | Orchestration + Selenium loop |
-| 10 | `app/controllers/pullpush_final_stretch_controller.py` | Bulk PullPush orchestration |
-| 11 | `app/views/scraper_view.py`, `cli_progress.py` | CLI “view” layer |
+| 1 | `app/mongo_config.py` | Config leaf |
+| 2 | `app/models/post.py` | Domain `Post` |
+| 3 | `app/models/pullpush.py` | PullPush types |
+| 4 | `app/services/chrome_driver.py` | Driver factory |
+| 5 | `app/services/shreddit_parser.py` | DOM → `Post` |
+| 6 | `app/services/pullpush_client.py` | HTTP client |
+| 7 | `app/repositories/mongo_connection.py` | Sync collection helper |
+| 8 | `app/repositories/mongo_posts.py` | Sync repository (main pattern) |
+| 9 | `app/repositories/posts_repository.py` | Motor async twin |
+| 10 | `app/controllers/reddit_scraper_controller.py` | Selenium orchestration |
+| 11 | `app/controllers/pullpush_final_stretch_controller.py` | Bulk PullPush |
+| 12 | `app/views/scraper_view.py` | CLI view |
+| 13 | `app/views/cli_progress.py` | CLI progress |
 
 ### Checkpoint
 
-1. What belongs in a repository vs a controller vs a service in this project?
-2. How does `MongoPostsRepository` hide Mongo details from the scraper?
-3. Trace one Reddit post from Selenium element to `insert_one`.
+1. Repository vs controller vs service in this project?
+2. How does `MongoPostsRepository` hide Mongo from the scraper?
+3. Trace one post: Selenium element → `insert_one`.
 4. Where is composition used instead of inheritance in `app/`?
 
 ---
@@ -104,33 +109,27 @@ Explain the layered architecture (config → models → services → repositorie
 
 ### Goal
 
-Trace a Telegram message through producers, topics, consumer groups, and the model service write path. Explain offset/ack behavior in the Telegram fetcher and why services are separate processes.
+Telegram → topics → consumer groups → model write path; offset ack in `TelegramFetchService`.
 
-### Concept primer (before files)
+### Concept primer
 
-| Concept | Why |
-|---------|-----|
-| async/await + event loop | All four `main.py` loops |
-| Kafka topics, producers, consumers | Message bus |
-| Consumer groups + offsets | `preprocessing-group`, `model-group` |
-| At-least-once / idempotency | Unique `post_id` index |
-| JSON serialize/deserialize | Kafka value codecs |
+async/await; Kafka topics/producers/consumers/groups/offsets; idempotency via `post_id` index.
 
-### Files
+### Files (verified)
 
 | # | File | Why |
 |---|------|-----|
-| 1 | `services/telegram-bot/telegram_service.py` | Fetch + offset + domain dataclass |
-| 2 | `services/telegram-bot/main.py` | Producer to `raw_messages` |
-| 3 | `services/preprocessing/main.py` | Consume → transform → `clean_messages` |
-| 4 | `services/model/main.py` | Consume → predict → Mongo + `results` |
+| 1 | `services/telegram-bot/telegram_service.py` | Fetch + offset + dataclass |
+| 2 | `services/telegram-bot/main.py` | Producer `raw_messages` |
+| 3 | `services/preprocessing/main.py` | `raw_messages` → `clean_messages` |
+| 4 | `services/model/main.py` | predict → Mongo + `results` |
 
 ### Checkpoint
 
-1. Name the three topics and which service produces/consumes each.
-2. How does `TelegramFetchService` avoid re-processing the same Telegram updates forever?
-3. What does the model service write to Mongo vs Kafka?
-4. Why is preprocessing a separate service from the model service?
+1. Three topics and who produces/consumes each?
+2. How does `TelegramFetchService` advance offset?
+3. Model service: Mongo vs Kafka writes?
+4. Why separate preprocessing and model processes?
 
 ---
 
@@ -138,37 +137,27 @@ Trace a Telegram message through producers, topics, consumer groups, and the mod
 
 ### Goal
 
-Explain FastAPI lifespan, dependency injection, Pydantic schemas, BSON serialization, and how routers read Mongo or call the ensemble. Connect WebSocket broadcast to the `results` topic.
+FastAPI lifespan, DI, Pydantic, serialization, routers, WebSocket fan-out from `results`.
 
-### Concept primer (before files)
-
-| Concept | Why |
-|---------|-----|
-| Pydantic models | Request/response contracts |
-| FastAPI `Depends` | Inject collection / ensemble |
-| Lifespan / startup-shutdown | Mongo + model + Kafka consumer task |
-| WebSockets | Live results fan-out |
-| CORS | Frontend on another origin |
-
-### Files
+### Files (verified)
 
 | # | File | Why |
 |---|------|-----|
 | 1 | `services/api/config.py` | Env + collection names |
-| 2 | `services/api/schemas.py` | API contracts |
-| 3 | `services/api/serialization.py` | Mongo doc → JSON-safe dict |
-| 4 | `services/api/deps.py` | DI helpers |
-| 5 | `services/api/routers/posts.py` | Posts + telegram list |
-| 6 | `services/api/routers/stats.py` | Aggregations |
-| 7 | `services/api/routers/predict.py` | Sync predict path |
-| 8 | `services/api/main.py` | App wiring + WS |
+| 2 | `services/api/schemas.py` | Contracts |
+| 3 | `services/api/serialization.py` | BSON → JSON-safe |
+| 4 | `services/api/deps.py` | DI |
+| 5 | `services/api/routers/posts.py` | Posts + `/posts/telegram` |
+| 6 | `services/api/routers/stats.py` | Stats |
+| 7 | `services/api/routers/predict.py` | `/predict` |
+| 8 | `services/api/main.py` | App + WS |
 
 ### Checkpoint
 
-1. Where is the ensemble stored, and how does a route get it?
-2. Difference between `posts` and `telegram_messages` collections in the API.
-3. What does the lifespan start and stop?
-4. How does a Kafka `results` message reach a browser tab?
+1. Where is `DistressEnsemble` stored and injected?
+2. `posts` vs `telegram_messages` collections?
+3. Lifespan start/stop?
+4. Kafka `results` → browser tab?
 
 ---
 
@@ -176,111 +165,159 @@ Explain FastAPI lifespan, dependency injection, Pydantic schemas, BSON serializa
 
 ### Goal
 
-Explain how Compose wires Zookeeper/Kafka/Mongo/services, what each Dockerfile copies and runs, and how dependencies differ per service.
+Compose topology, Dockerfiles (root context), `.dockerignore`, per-service requirements.
 
-### Concept primer (before files)
-
-| Concept | Why |
-|---------|-----|
-| Docker layers + caching | `COPY requirements` before code |
-| Multi-stage builds | Frontend Node → nginx |
-| Compose services, depends_on, healthchecks | Startup order |
-| Env vars / secrets | Tokens, `MONGO_URI`, `HF_REPO` |
-| Volumes | `mongo_data`, `hf_cache` |
-
-### Files
+### Files (verified)
 
 | # | File | Why |
 |---|------|-----|
-| 1 | `services/telegram-bot/Dockerfile` | Simplest service image |
-| 2 | `services/preprocessing/Dockerfile` | Same pattern |
-| 3 | `services/model/Dockerfile` | Includes `app/ml` shim — understand, don’t fix yet |
-| 4 | `services/api/Dockerfile` | Uvicorn entry |
-| 5 | `frontend/Dockerfile` | Multi-stage |
-| 6 | `docker-compose.yml` | Full topology |
-| 7 | `requirements*.txt` + each `services/*/requirements.txt` | Dep graphs |
+| 1 | `services/telegram-bot/Dockerfile` | Unchanged context |
+| 2 | `services/preprocessing/Dockerfile` | Root context + `distress_ml` |
+| 3 | `services/model/Dockerfile` | Root context + `[inference]` |
+| 4 | `services/api/Dockerfile` | Root context + `[inference]` |
+| 5 | `frontend/Dockerfile` | Multi-stage nginx |
+| 6 | `docker-compose.yml` | Full stack |
+| 7 | `packages/distress_ml/pyproject.toml` + `services/*/requirements.txt` | Dependency split |
+
+**Note:** Model Dockerfile no longer uses `app/ml` shim (removed in refactor).
 
 ### Checkpoint
 
-1. Which services depend on Kafka healthy? On Mongo healthy?
-2. What does the model Dockerfile do with `app/ml`?
-3. Why share an `hf_cache` volume between api and model?
-4. How would you start only infra + API for a UI demo?
+1. Which services wait on Kafka / Mongo healthy?
+2. How is `distress_ml` installed in images?
+3. Why shared `hf_cache` volume?
+4. What does root `.dockerignore` exclude to keep context small?
 
 ---
 
 ## Stage 6 — Frontend (brief)
 
-### Goal
-
-Explain how the SPA calls REST and WebSocket, and which pages use which endpoints. Light OOP; focus on data flow.
-
-### Concept primer (before files)
-
-| Concept | Why |
-|---------|-----|
-| SPA + API base URL | `VITE_API_BASE_URL` |
-| `fetch` + typed responses | `api.ts` |
-| WebSocket client lifecycle | Telegram live updates |
-| React state / effects (high level) | Load vs live merge |
-
-### Files
+### Files (verified)
 
 | # | File | Why |
 |---|------|-----|
-| 1 | `frontend/src/lib/api.ts` | Client surface |
-| 2 | `frontend/src/pages/DetectPage.tsx` | `/predict` path |
-| 3 | `frontend/src/pages/TelegramPage.tsx` | List + WS path |
+| 1 | `frontend/src/lib/api.ts` | REST + WS URLs |
+| 2 | `frontend/src/pages/DetectPage.tsx` | `/predict` |
+| 3 | `frontend/src/pages/TelegramPage.tsx` | List + WebSocket |
 
 ### Checkpoint
 
-1. Which function hits `/predict/`?
-2. How does TelegramPage merge a WS message into the list?
-3. What still references the removed scan endpoint?
+1. Function for `/predict/`?
+2. WS merge into list?
+3. Dead `scanTelegram` reference?
 
 ---
 
-## Files covered (deep dive)
+## Key concepts learned — Stage 1
 
-| File | Stage | Done? |
-|------|-------|-------|
-| `services/model/escalation.py` | 1 | Done |
-| `services/preprocessing/preprocess.py` | 1 | Done |
-| `services/model/ensemble.py` | 1 | Done (quiz skipped by user) |
-| `services/api/ml/` | 1 | Walkthrough done; quiz pending |
+- **Cascade vs ensemble name:** runtime is a **two-stage cascade** (fast then optional BERT), not 0.35/0.65 score blending.
+- **Routing threshold vs decision threshold:** `fast_escalation_threshold` (0.5) gates BERT; `distress_threshold` (0.45) labels after BERT; low path always `not_distress` without comparing fast score to 0.45.
+- **Pure functions vs stateful class:** `should_escalate` / `preprocess` vs `DistressEnsemble` holding loaded models.
+- **Composition over inheritance:** ensemble calls preprocess + escalation; no model subclass tree.
+- **Encapsulation:** `_predict_tfidf`, `_predict_bert`; public `load()` + `predict()`.
+- **Facade:** `DistressEnsemble` hides HF + sklearn details from Kafka/API callers.
+- **Serialization:** TF-IDF pipeline loaded via **joblib** pickle from Hub (`tfidf_logreg.pkl`).
+- **HF Hub:** `hf_hub_download` + `from_pretrained(HF_REPO)`; **`HF_HOME` / `hf_cache` volume** for warm starts.
+- **Inference mode:** `model.eval()` + `torch.no_grad()` for BERT forward pass.
+- **Preprocess:** clean (regex) vs lemmatize (NLTK + POS); BERT uses **raw** text, TF-IDF uses **preprocessed** text.
+- **Training–serving skew risk:** Kafka `clean_text` not used by model today; NLTK runs again inside `predict()` (see Option B in Decisions).
+- **Stemming vs lemmatization:** project uses **lemmatization** with WordNet POS, not Porter stemmer.
 
 ---
 
-## Key concepts retained from Phase 0/1
+## Refactor summary (shared `distress_ml` package)
 
-- Dual architecture: offline `app/` corpus vs online Kafka `services/`
-- Topics: `raw_messages` → `clean_messages` → `results`
-- Two inference paths: model service vs API `/predict`
-- Model Docker `app/ml` shim works in container; design smell logged in `ISSUES.md`
-- **Shared package:** ML lives in `packages/distress_ml` (`distress_ml`); services import from there (branch `refactor/shared-ml-package`)
+### What changed
 
+- **Added** `packages/distress_ml/` (single source: `preprocess`, `escalation`, `ensemble`).
+- **Deleted** triplicated ML files under `services/model/`, `services/preprocessing/preprocess.py`, and entire `services/api/ml/`.
+- **Imports** everywhere: `from distress_ml...` (model, preprocessing, API).
+- **Docker:** build `context: .` for preprocessing, model, api; copy package → `pip install` → **`rm -rf /opt/distress_ml`** in same RUN; code only in **site-packages**.
+- **Root `.dockerignore`:** excludes `models/`, `notebooks/`, `posts.csv`, `app/`, etc., so context stays **KB not GB**.
+- **Bugfix (post-refactor):** `services/api/serialization.py` coerces float `created_utc` → int for `/posts/telegram` (commit `055e219`).
+
+### Why
+
+- One place to change ML logic; no `app/ml` Docker hack; preprocessing image installs package **without** `[inference]` (no torch).
+
+### Evidence (measured)
+
+| Check | Result |
+|-------|--------|
+| Build context (no-cache) | `#6 236B`, `#7 1.04kB`, `#8 3.41kB`, `#9 1.85kB` (not ~3.5GB) |
+| Image sizes | preprocessing **280MB**, model **1.53GB**, api **1.58GB** (old preprocessing on main before refactor: **277MB**) |
+| `/predict` vs baseline | **IDENTICAL** (three test strings, `/tmp/baseline_predictions.json`) |
+| preprocessing + torch | `ModuleNotFoundError: No module named 'torch'` |
+| `/opt/distress_ml` after build | **absent**; imports from `/usr/local/lib/python3.11/site-packages/distress_ml/` |
+| Git diff stat (since pre-refactor base `f66ed7b`) | **389 lines deleted, 84 added** (27 files) |
+
+### Commits (on `main`)
+
+| Hash | Message |
+|------|---------|
+| `10f9be9` | refactor: extract shared distress_ml package, remove triplicated ML code |
+| `6221ada` | chore: ignore distress_ml egg-info from editable installs |
+| `0a142aa` | chore: ignore egg-info in Docker context; document Atlas mongo finding |
+| `c7718f2` | chore: remove /opt/distress_ml after pip install in Docker images |
+| `055e219` | fix some problem (`created_utc` float → int in serialization) |
+
+Local dev: `pip install -e "packages/distress_ml[inference]"` from repo root.
+
+---
+
+## Planned decisions (fixes after learning — not done yet)
+
+### Option B — preprocessing service keeps a real role
+
+- **After Stage 3** (and verified with same `/predict` baseline as refactor):
+  - Add optional parameter to `predict()` (e.g. precomputed `clean_text`) so **NLTK runs once** in preprocessing service; model passes Kafka `clean_text`.
+  - Introduce **`BaseKafkaService`** (Template Method) shared by `services/preprocessing/main.py` and `services/model/main.py` (consumer/producer loop boilerplate).
+
+### Counter-argument (YAGNI)
+
+- If there is only one consumer and one transform, **delete preprocessing service** and call `distress_ml.preprocess` inside model — simpler ops, fewer moving parts.
+- **Trade-off to articulate:** Option B = operational separation + horizontal scale of stateless preprocess vs YAGNI = fewer services and less duplicate Kafka plumbing.
+
+---
+
+## Interview talking points collected
+
+1. **Refactor story:** triplication → `packages/distress_ml`, root Docker context, `[inference]` extra, no torch in preprocessing, baseline-identical predictions.
+2. **Escalation trade-off:** code has **one trigger** (`p_fast >= 0.5`); docs/old narrative described **three triggers + 0.35/0.65 blending** — system recall **capped by fast model recall** on the no-escalate path.
+3. **Soccer/homework example:** `p_fast ≈ 0.62` escalates; DistilBERT raised to **~0.93 distress** — interview example of **false positive** on casual negative text (model behavior, not a code bug).
+4. **Pickle security:** joblib/sklearn pickle from Hub — trust repo, pin revision, supply-chain awareness.
+5. **Model version pinning:** `HF_REPO` without pinned revision — reproducibility risk.
+6. **"no" dropped:** `words_to_keep` includes `"no"` but `len(token) >= 3` filter removes it — negation handling gap for TF-IDF path.
+
+---
+
+## Architecture reminder (Phase 0)
+
+- **Online:** `telegram-bot` → `raw_messages` → `preprocessing` → `clean_messages` → `model` → Mongo `telegram_messages` + `results` → `api` (REST + `/ws/results`) → `frontend`.
+- **Direct detect:** `DetectPage` → `POST /predict/` → API in-process `DistressEnsemble` (no Kafka).
+- **Offline:** `app/` collectors → Mongo `posts` (training corpus; not in Kafka path).
 
 ---
 
 ## Questions I struggled with
 
-- `escalation.py` Q2: knew caller decides threshold, but did not name `DistressEnsemble.fast_escalation_threshold` on first try.
-- `escalation.py`: skipped part A (own-words purpose) on first reply.
-- `preprocess.py`: strong overall; lemmatize description missed stopword/`len>=3` filtering (POS role slightly imprecise).
-- `ensemble.py`: quiz skipped — review answer key in chat before interview.
+- `escalation.py`: caller owns threshold — name `fast_escalation_threshold`; skipped own-words once.
+- `preprocess.py`: missed `len>=3` filter vs `words_to_keep`; POS maps for lemmatizer not “added to output string”.
+- `ensemble.py`: quiz skipped — review checkpoint Q3 and soccer/homework threshold band before interview.
 
 ---
 
 ## Session log
 
-- **2026-10-05:** Phase 0 map + Phase 1 traces; Dockerfile `app/ml` correction.
-- **2026-10-05:** Reorganized into Stages 1–6; created `ISSUES.md`; understanding-first rules; Stage 1 primer next.
-- **2026-10-05:** Stage 1 file 1 — `services/model/escalation.py` walkthrough; waiting on user explanation + quiz.
-- **2026-10-05:** User quiz on `escalation.py`: Q1 solid; Q2/Q3 correct in substance; filled gaps (attribute name, DistilBERT runs on True).
-- **2026-10-05:** Stage 1 file 2 — `services/preprocessing/preprocess.py` walkthrough; quiz pending.
-- **2026-10-05:** User quiz on `preprocess.py`: solid; clarified lemmatize filters + POS maps for WordNet (not “adds state to output”).
-- **2026-10-05:** Stage 1 file 3 — `services/model/ensemble.py` walkthrough; quiz pending.
-- **2026-10-05:** User skipped `ensemble.py` quiz; started `services/api/ml/` layout.
-- **2026-10-05:** Refactor `refactor/shared-ml-package`: extracted `packages/distress_ml`, removed triplicated ML modules, root Docker build context; baseline `/predict` identical; ISSUES #3–5 marked resolved.
-- **2026-10-05:** Pre-merge verification (raw): predict baseline IDENTICAL after EOF normalize; preprocessing has no torch; no-cache transferring context 236B / 1.04kB / 3.41kB / 1.85kB; image sizes api 1.58GB, model 1.53GB, preprocessing 280MB vs main-tagged `distress-preprocessing:before` 277MB (+~3MB); MONGO_URI from `.env` → Atlas (local mongo unused); `**/*.egg-info` added to `.dockerignore` but `/opt/distress_ml/distress_ml.egg-info` still appears after pip install (logged ISSUES #16).
-- **2026-10-05:** Dockerfiles: `rm -rf /opt/distress_ml` after pip install; verified `/opt/distress_ml` absent, imports from site-packages; images preprocessing 280MB, model 1.53GB, api 1.58GB; predict diff IDENTICAL; ISSUES #16 resolved.
+- **2026-10-05:** Phase 0 map; Phase 1 traces; Stages 1–6 plan; Stage 1 files 1–3 deep dive.
+- **2026-10-05:** Refactor + verification on `main`; Telegram 500 fix (`055e219`).
+- **2026-10-05:** Handoff doc update for new Cursor chat (this file + `ISSUES.md`).
+
+---
+
+## How to resume in a new chat
+
+1. Read **`LEARNING_PROGRESS.md`** (this file) and **`ISSUES.md`** in full.
+2. Confirm branch/state: ML lives under **`packages/distress_ml/distress_ml/`**; **`services/api/ml/` does not exist**.
+3. Ask me to run **Stage 1 checkpoint** questions, or say **`next`** after checkpoint to get **Stage 2 concept primer**, then **`app/mongo_config.py`** as first file.
+4. During learning: **no code changes**; log smells in **`ISSUES.md`** only.
