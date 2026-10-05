@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from deps import get_ensemble
-from ml.ensemble import DistressEnsemble
+from distress_ml.ensemble import DistressEnsemble
 from schemas import PredictBatchRequest, PredictBatchResponse, PredictRequest, PredictResponse
 
 router = APIRouter(prefix="/predict", tags=["predict"])

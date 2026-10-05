@@ -6,8 +6,8 @@ from transformers import (
     DistilBertTokenizerFast,
 )
 
-from ml.escalation import should_escalate
-from ml.preprocess import preprocess
+from distress_ml.preprocess import preprocess
+from distress_ml.escalation import should_escalate
 
 HF_REPO = os.getenv("HF_REPO", "Hliran2/distilbert-distress-detector")
 
@@ -69,6 +69,8 @@ class DistressEnsemble:
         self._bert_model.to(self.device)
         print("✓ DistilBERT loaded")
 
+    # ── Internal inference ────────────────────────────────────────────────────
+
     def _predict_tfidf(self, text_clean: str) -> float:
         """Run TF-IDF pipeline on preprocessed text. Returns p(distress)."""
         return float(self._tfidf_model.predict_proba([text_clean])[0][1])
@@ -86,6 +88,8 @@ class DistressEnsemble:
         with torch.no_grad():
             logits = self._bert_model(**inputs).logits
         return float(torch.softmax(logits, dim=1)[0][1])
+
+    # ── Public predict ────────────────────────────────────────────────────────
 
     def predict(self, raw_text: str) -> dict:
         """

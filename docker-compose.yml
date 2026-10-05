@@ -58,7 +58,8 @@ services:
 
   preprocessing:
     build:
-      context: ./services/preprocessing
+      context: .
+      dockerfile: services/preprocessing/Dockerfile
     restart: unless-stopped
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -68,7 +69,8 @@ services:
 
   model:
     build:
-      context: ./services/model
+      context: .
+      dockerfile: services/model/Dockerfile
     restart: unless-stopped
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -86,7 +88,8 @@ services:
 
   api:
     build:
-      context: ./services/api
+      context: .
+      dockerfile: services/api/Dockerfile
     restart: unless-stopped
     ports:
       - "8001:8000"

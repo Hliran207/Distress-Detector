@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from ensemble import DistressEnsemble
+from distress_ml.ensemble import DistressEnsemble
 
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 MONGO_URI = os.environ["MONGO_URI"]

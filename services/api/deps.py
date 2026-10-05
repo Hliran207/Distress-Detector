@@ -2,7 +2,7 @@ from fastapi import HTTPException, Request
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 
 from config import COLLECTION_NAME, TELEGRAM_COLLECTION_NAME, get_db_name
-from ml.ensemble import DistressEnsemble
+from distress_ml.ensemble import DistressEnsemble
 
 
 def get_mongo_client(request: Request) -> AsyncIOMotorClient:

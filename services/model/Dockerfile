@@ -2,15 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN mkdir -p /home/app/.cache/huggingface app/ml && \
-    touch app/__init__.py app/ml/__init__.py
+RUN mkdir -p /home/app/.cache/huggingface
 
-COPY requirements.txt .
+COPY services/model/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py ensemble.py escalation.py preprocess.py ./
-RUN cp escalation.py app/ml/escalation.py && \
-    cp preprocess.py app/ml/preprocess.py
+COPY packages/distress_ml /opt/distress_ml
+RUN pip install --no-cache-dir "/opt/distress_ml[inference]"
+
+COPY services/model/main.py .
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

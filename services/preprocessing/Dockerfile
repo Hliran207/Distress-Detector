@@ -2,10 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY services/preprocessing/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py preprocess.py .
+COPY packages/distress_ml /opt/distress_ml
+RUN pip install --no-cache-dir /opt/distress_ml
+
+COPY services/preprocessing/main.py .
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

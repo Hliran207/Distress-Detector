@@ -10,3 +10,11 @@ frontend
 terminals
 **/.venv
 **/node_modules
+models/
+notebooks/
+posts.csv
+*.csv
+*.ipynb
+app/
+scripts/
+__pycache__/

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from config import load_mongo_uri
-from ml.ensemble import DistressEnsemble
+from distress_ml.ensemble import DistressEnsemble
 from routers.posts import router as posts_router
 from routers.predict import router as predict_router
 from routers.stats import router as stats_router

@@ -4,10 +4,13 @@ WORKDIR /app
 
 RUN mkdir -p /home/app/.cache/huggingface
 
-COPY requirements.txt .
+COPY services/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY packages/distress_ml /opt/distress_ml
+RUN pip install --no-cache-dir "/opt/distress_ml[inference]"
+
+COPY services/api/ .
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

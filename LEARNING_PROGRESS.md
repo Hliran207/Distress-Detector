@@ -257,6 +257,8 @@ Explain how the SPA calls REST and WebSocket, and which pages use which endpoint
 - Topics: `raw_messages` → `clean_messages` → `results`
 - Two inference paths: model service vs API `/predict`
 - Model Docker `app/ml` shim works in container; design smell logged in `ISSUES.md`
+- **Shared package:** ML lives in `packages/distress_ml` (`distress_ml`); services import from there (branch `refactor/shared-ml-package`)
+
 
 ---
 
@@ -279,3 +281,4 @@ Explain how the SPA calls REST and WebSocket, and which pages use which endpoint
 - **2026-10-05:** User quiz on `preprocess.py`: solid; clarified lemmatize filters + POS maps for WordNet (not “adds state to output”).
 - **2026-10-05:** Stage 1 file 3 — `services/model/ensemble.py` walkthrough; quiz pending.
 - **2026-10-05:** User skipped `ensemble.py` quiz; started `services/api/ml/` layout.
+- **2026-10-05:** Refactor `refactor/shared-ml-package`: extracted `packages/distress_ml`, removed triplicated ML modules, root Docker build context; baseline `/predict` identical; ISSUES #3–5 marked resolved.

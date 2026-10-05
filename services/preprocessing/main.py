@@ -3,7 +3,7 @@ import json
 import os
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from preprocess import preprocess
+from distress_ml.preprocess import preprocess
 
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 
