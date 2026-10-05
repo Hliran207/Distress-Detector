@@ -23,4 +23,8 @@ def serialize_mongo_doc(doc: dict[str, Any]) -> dict[str, Any]:
     if doc.get("post_id") is not None:
         doc["post_id"] = str(doc["post_id"])
 
+    created = doc.get("created_utc")
+    if isinstance(created, float):
+        doc["created_utc"] = int(created)
+
     return doc
