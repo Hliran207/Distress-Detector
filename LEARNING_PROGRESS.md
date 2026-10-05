@@ -282,3 +282,4 @@ Explain how the SPA calls REST and WebSocket, and which pages use which endpoint
 - **2026-10-05:** Stage 1 file 3 — `services/model/ensemble.py` walkthrough; quiz pending.
 - **2026-10-05:** User skipped `ensemble.py` quiz; started `services/api/ml/` layout.
 - **2026-10-05:** Refactor `refactor/shared-ml-package`: extracted `packages/distress_ml`, removed triplicated ML modules, root Docker build context; baseline `/predict` identical; ISSUES #3–5 marked resolved.
+- **2026-10-05:** Pre-merge verification (raw): predict baseline IDENTICAL after EOF normalize; preprocessing has no torch; no-cache transferring context 236B / 1.04kB / 3.41kB / 1.85kB; image sizes api 1.58GB, model 1.53GB, preprocessing 280MB vs main-tagged `distress-preprocessing:before` 277MB (+~3MB); MONGO_URI from `.env` → Atlas (local mongo unused); `**/*.egg-info` added to `.dockerignore` but `/opt/distress_ml/distress_ml.egg-info` still appears after pip install (logged ISSUES #16).

@@ -18,3 +18,4 @@ posts.csv
 app/
 scripts/
 __pycache__/
+**/*.egg-info
