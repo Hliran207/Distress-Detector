@@ -28,4 +28,4 @@ Do not fix these during the understanding phase. We will triage together later.
 13. `packages/distress_ml/distress_ml/preprocess.py:7-11` (was under services) — `nltk.download(...)` runs at import time (side effect on every process start / cold start).
 14. `packages/distress_ml/distress_ml/ensemble.py` `load()` docstring — says “FastAPI startup”; also used by Kafka model service `main.py`.
 15. `docker-compose.yml` + `.env` — Compose runs a local `mongo` service, but the configured `MONGO_URI` points to Atlas (`mongodb+srv://…`); model/api do not connect to the local container at runtime.
-16. Docker image `/opt/distress_ml/distress_ml.egg-info` — even with `**/*.egg-info` in root `.dockerignore`, `pip install /opt/distress_ml` regenerates egg-info in the copied source tree (not only under site-packages).
+16. ~~Docker image `/opt/distress_ml/distress_ml.egg-info`~~ — **RESOLVED** on branch `refactor/shared-ml-package`: `pip install` then `rm -rf /opt/distress_ml` in the same RUN layer (code only in site-packages).

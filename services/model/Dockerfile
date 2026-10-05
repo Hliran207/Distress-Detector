@@ -8,7 +8,7 @@ COPY services/model/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY packages/distress_ml /opt/distress_ml
-RUN pip install --no-cache-dir "/opt/distress_ml[inference]"
+RUN pip install --no-cache-dir "/opt/distress_ml[inference]" && rm -rf /opt/distress_ml
 
 COPY services/model/main.py .
 

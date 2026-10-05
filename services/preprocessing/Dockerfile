@@ -6,7 +6,7 @@ COPY services/preprocessing/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY packages/distress_ml /opt/distress_ml
-RUN pip install --no-cache-dir /opt/distress_ml
+RUN pip install --no-cache-dir /opt/distress_ml && rm -rf /opt/distress_ml
 
 COPY services/preprocessing/main.py .
 
