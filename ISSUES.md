@@ -67,6 +67,8 @@ During **learning**: log only; do not fix unless explicitly in a fix phase.
 27. `app/services/chrome_driver.py:23-28` — If `user_data_dir` is set, `--headless=new` is never applied even when `config.headless=True` (only a log line); config flag and actual browser mode can disagree.
 28. `app/services/shreddit_parser.py:50-53` — Broad `except Exception: return None` hides real parse bugs; only `StaleElementReferenceException` is named.
 29. `app/repositories/mongo_connection.py` — `get_posts_collection()` appears unused (no imports); PullPush/`main` wires `MongoClient` inline. Also hardcodes `db["posts"]` vs `COLLECTION_NAME` (see #26).
+30. `app/controllers/pullpush_final_stretch_controller.py` — Often uses `mongo_repo.collection` directly (find/count/delete); bypasses repository API and leaks PyMongo into the controller.
+31. `app/repositories/posts_repository.py` — Async Motor twin appears unused; docstring cites Telegram scan / `api_main.lifespan` (legacy). Live API uses Motor collections via `services/api/deps.py`, not this class. No `insert_post(Post)`.
 
 ---
 

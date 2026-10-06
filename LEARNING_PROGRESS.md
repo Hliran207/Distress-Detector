@@ -32,7 +32,7 @@ I'm preparing for a **Salesforce interview (Archive team)**. One part is a **dee
 | 6 | Frontend (brief) | Not started |
 | Later | Planned fixes (Option B, BaseKafkaService) + mock interview | After Stages 1–6 |
 
-**Resume here:** Stage 2 file 7 — `app/repositories/mongo_connection.py` deep dive + quiz, then `"next"`.
+**Resume here:** Stage 2 file 9 — `app/repositories/posts_repository.py` deep dive + quiz, then `"next"`.
 
 ---
 
@@ -88,9 +88,9 @@ Dataclasses; layered architecture; Repository pattern; Factory (Chrome); composi
 | 4 | `app/services/chrome_driver.py` | Driver factory | Done (quiz skipped) |
 | 5 | `app/services/shreddit_parser.py` | DOM → `Post` | Done (quiz skipped) |
 | 6 | `app/services/pullpush_client.py` | HTTP client | Done (quiz skipped) |
-| 7 | `app/repositories/mongo_connection.py` | Sync collection helper | In progress |
-| 8 | `app/repositories/mongo_posts.py` | Sync repository (main pattern) | |
-| 9 | `app/repositories/posts_repository.py` | Motor async twin | |
+| 7 | `app/repositories/mongo_connection.py` | Sync collection helper | Done (quiz skipped) |
+| 8 | `app/repositories/mongo_posts.py` | Sync repository (main pattern) | Done (quiz skipped) |
+| 9 | `app/repositories/posts_repository.py` | Motor async twin | In progress |
 | 10 | `app/controllers/reddit_scraper_controller.py` | Selenium orchestration | |
 | 11 | `app/controllers/pullpush_final_stretch_controller.py` | Bulk PullPush | |
 | 12 | `app/views/scraper_view.py` | CLI view | |
